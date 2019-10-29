@@ -1,0 +1,72 @@
+Version: 2
+#
+# Jobs are a collection of Steps. All of the steps in the job are executed in a single unit which consumes a CircleCI container from your plan while it’s running.
+# Job: "maven-build" job test and package the application with Maven, persist JAR in workspace and store it as Artefacts
+# Job: "aws-deploy" job get binary from attached workspace and deploy to AWS
+# https://circleci.com/docs/2.0/jobs-steps/
+#
+jobs:
+  # Job to Build Maven application
+  build:
+
+    working_directory: . # directory where steps will run
+
+    # run the steps with Docker
+    docker:
+      - image: circleci/openjdk:8-jdk-stretch # ...with this image as the primary container; this is where all `steps` will run
+
+    steps:
+
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          key: cqrs-{{ checksum "pom.xml" }}
+
+      - run: mvn dependency:go-offline # gets the project dependencies
+
+      - save_cache: # saves the project dependencies
+          paths:
+            - ~/.m2
+          key: cqrs-{{ checksum "pom.xml" }}
+
+      - run: mvn package # run the actual tests
+
+      - store_test_results: # uploads the test metadata from the `target/surefire-reports` directory so that it can show up in the CircleCI dashboard.
+          # Upload test results for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
+          path: target/surefire-reports
+      # Store artifacts on CircleCI internal repository
+      #- store_artifacts:
+      #    path: target/cqrs-1.0.jar
+
+      # Persist the specified paths target/demo-1.0.jar) into the workspace for use in aws-deploy job.
+      - persist_to_workspace:
+          # Must be an absolute path, or relative path from working_directory. This is a directory on the container which is taken to be the root directory of the workspace.
+          root: connections/target
+          # Must be relative path from root
+          paths:
+            - connections-0.0.1-SNAPSHOT.jar
+
+      - persist_to_workspace:
+          # Must be an absolute path, or relative path from working_directory. This is a directory on the container which is taken to be the root directory of the workspace.
+          root: posts/target
+          # Must be relative path from root
+          paths:
+            - posts-0.0.1-SNAPSHOT.jar
+
+      - persist_to_workspace:
+          # Must be an absolute path, or relative path from working_directory. This is a directory on the container which is taken to be the root directory of the workspace.
+          root: connectionposts/target
+          # Must be relative path from root
+          paths:
+            - connectionposts-0.0.1-SNAPSHOT.jar
+
+#
+# Workflows: A workflow is a set of rules for defining a collection of jobs and their run order.
+# see https://circleci.com/docs/2.0/workflows/
+#
+workflows:
+  version: 2
+  workflow:
+    jobs:
+      - build
