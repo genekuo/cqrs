@@ -9,7 +9,7 @@ jobs:
   # Job to Build Maven application
   build:
 
-    working_directory: ~/cqrs # directory where steps will run
+    working_directory: cqrs # directory where steps will run
 
     # run the steps with Docker
     docker:
